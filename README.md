@@ -17,6 +17,7 @@ The parser can be used to create other programs that, for example:
 * Programmatically read data from a HTML page.
 * Convert HTML to XML.
 * Convert HTML to text/gemini.
+* Convert HTML to Markdown.
 * Indent HTML.
 * Minify HTML.
 * Validate HTML.
