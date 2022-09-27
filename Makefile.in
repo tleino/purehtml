@@ -1,0 +1,135 @@
+SHELL = /bin/sh
+CFLAGS = -g -std=c99 -pedantic -Wall -Werror @SYSTEM_CFLAGS@
+LDFLAGS = @SYSTEM_LDFLAGS@
+CONFIGURE_FLAGS = @CONFIGURE_FLAGS@
+
+prefix = @prefix@
+exec_prefix = $(prefix)
+bindir = $(exec_prefix)/bin
+libdir = $(exec_prefix)/lib
+datarootdir = $(prefix)/share
+mandir = $(datarootdir)/man
+includedir = $(exec_prefix)/include
+
+INSTALL ?= install
+INSTALLFLAGS ?= -D
+
+SRCS=\
+	attr.c \
+	document.c \
+	dispatch.c \
+	tokenize.c \
+	tagmap.c \
+	token.c \
+	node.c \
+	elem.c \
+	cdata.c \
+	ostack.c \
+	util.c
+
+INSTALL_HEADERS=\
+	attr.h \
+	document.h \
+	dispatch.h \
+	tokenize.h \
+	tagmap.h \
+	token.h \
+	node.h \
+	elem.h \
+	cdata.h \
+	ostack.h \
+	util.h \
+	states.h \
+	attrs.h \
+	tags.h \
+	imodes.h
+
+TESTS=\
+	attr \
+	tokenize \
+	ostack
+
+PROG=purehtml
+
+OBJS=$(SRCS:.c=.o)
+
+all: Makefile attrs.c attrs.h tags.c tags.h states.c states.h imodes.c imodes.h lib$(PROG).so $(PROG).a
+
+test: $(TESTS)
+	@for a in $(TESTS) ; do \
+		./$$a && echo "$$a ok"; \
+	done
+
+attr: attr.c attr.h
+	$(CC) -DTEST $(CFLAGS) -o$@ attr.c
+ostack: ostack.c ostack.h
+	$(CC) -DTEST $(CFLAGS) -o$@ ostack.c
+tokenize: tokenize.c tokenize.h token.o attr.o tagmap.o util.o
+	$(CC) -DTEST $(CFLAGS) -o$@ tokenize.c token.o attr.o tagmap.o util.o
+
+$(PROG).a: $(OBJS)
+	ar r $(PROG).a $(OBJS)
+	ranlib $(PROG).a
+
+lib$(PROG).so: $(OBJS)
+	$(CC) -shared -Wl,-rpath=$(libdir) -o $@ $(OBJS)
+
+tags.c: tags.awk tags.txt
+	awk -vmode=c -f tags.awk tags.txt >tags.c
+tags.h: tags.awk tags.txt
+	awk -vmode=h -f tags.awk tags.txt >tags.h
+
+attrs.c: attrs.awk attrs.txt
+	awk -vmode=c -f attrs.awk attrs.txt >attrs.c
+attrs.h: attrs.awk attrs.txt
+	awk -vmode=h -f attrs.awk attrs.txt >attrs.h
+
+states.c: enum.awk states.txt
+	awk -vmode=c -vname=states -f enum.awk <states.txt >states.c
+states.h: enum.awk states.txt
+	awk -vmode=h -vname=states -vprefix=STATE -f enum.awk <states.txt >states.h
+
+imodes.c: enum.awk imodes.txt
+	awk -vmode=c -vname=imodes -f enum.awk <imodes.txt >imodes.c
+imodes.h: enum.awk imodes.txt
+	awk -vmode=h -vname=imodes -vprefix=IMODE -f enum.awk <imodes.txt >imodes.h
+
+Makefile: Makefile.in
+	./configure $(CONFIGURE_FLAGS)
+
+deps: attrs.c tags.c attrs.h tags.h imodes.c imodes.h states.c states.h
+	sed -i '/^# Dependencies/,/^# End dependencies/d' Makefile
+	echo "# Dependencies (generated on $$(date))" >>Makefile
+	for a in $(SRCS) ; \
+		do \
+			$(CC) -MM -MT $$(echo $$a | cut -d. -f1).o $$a \
+				>>Makefile ; \
+		done >>Makefile
+	echo "# End dependencies" >>Makefile
+
+.c.o:
+	$(CC) $(CFLAGS) -o$@ -c $<
+
+clean:
+	rm -f $(OBJS) $(PROG).a lib$(PROG).so attrs.c states.c tags.c tags.h states.h imodes.c imodes.h
+
+distclean: clean
+
+install: $(PROG).a lib$(PROG).so $(INSTALL_HEADERS) purehtml.pc
+	$(INSTALL) -m 0444 $(INSTALLFLAGS) $(PROG).a $(DESTDIR)$(libdir)/$(PROG).a
+	$(INSTALL) -m 0444 $(INSTALLFLAGS) lib$(PROG).so $(DESTDIR)$(libdir)/lib$(PROG).so
+	@for a in $(INSTALL_HEADERS) ; do \
+		echo $(INSTALL) -m 0444 $(INSTALLFLAGS) $$a $(includedir)/purehtml/$$a ; \
+		$(INSTALL) -m 0444 $(INSTALLFLAGS) $$a $(includedir)/purehtml/$$a ; \
+	done
+	$(INSTALL) $(INSTALLFLAGS) -m 0444 purehtml.pc $(libdir)/pkgconfig/purehtml.pc
+
+uninstall:
+	rm -f $(DESTDIR)$(bindir)/$(PROG).a
+	rm -f $(DESTDIR)$(bindir)/lib$(PROG).so
+	rm -f $(DESTDIR)$(includedir)/purehtml/*.h
+
+.PHONY: deps
+
+# Dependencies
+# End dependencies

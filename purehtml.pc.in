@@ -1,0 +1,12 @@
+prefix=@prefix@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: purehtml
+Description: purely HTML-only parser
+URL: https://github.com/tleino/purehtml
+Version: @version@
+Libs: ${libdir}/purehtml.a
+Cflags: -I${includedir} -I${includedir}/purehtml
+

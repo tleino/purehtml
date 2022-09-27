@@ -1,0 +1,39 @@
+#!/bin/sh
+# Usage: ./configure [install prefix]
+
+prefix=/usr/local
+version=0.1.0
+if [ "$#" -eq 1 ] ; then prefix=$1 ; fi
+echo "prefix=${prefix}"
+CONFIGURE_FLAGS=${prefix}
+
+SYSTEM_CFLAGS=
+case $(uname) in
+	Linux )
+		SYSTEM_CFLAGS="-D_POSIX_C_SOURCE=200809L"
+		SYSTEM_LDFLAGS=""
+	;;
+	OpenBSD )
+		SYSTEM_CFLAGS=""
+		SYSTEM_LDFLAGS=""
+	;;
+esac
+echo "system: $(uname)"
+echo "SYSTEM_CFLAGS=" ${SYSTEM_CFLAGS}
+
+echo "create: Makefile"
+echo '# Automatically generated from Makefile.in by configure' >Makefile
+echo >>Makefile
+sed \
+	-e "s|@prefix@|${prefix}|g" \
+	-e "s|@SYSTEM_CFLAGS@|${SYSTEM_CFLAGS}|g" \
+	-e "s|@SYSTEM_LDFLAGS@|${SYSTEM_LDFLAGS}|g" \
+	-e "s|@CONFIGURE_FLAGS@|${CONFIGURE_FLAGS}|g" \
+	Makefile.in >>Makefile
+echo "create: purehtml.pc.in"
+echo >purehtml.pc
+sed \
+	-e "s|@prefix@|${prefix}|g" \
+	-e "s|@version@|${version}|g" \
+	purehtml.pc.in >>purehtml.pc
+make deps

@@ -73,6 +73,26 @@ None.
 a normal near POSIX-compliant environment and a C compiler, so that using the
 parser would be as simple as possible for the envisioned use cases.
 
+## Compile
+
+	./configure ~
+	make
+	make install
+
+	export PKG_CONFIG_PATH=~/lib/pkgconfig
+
+	cd examples/dumptree
+	./configure ~
+	make
+	make install
+
+	cd ../..
+
+	cd examples/webgem
+	./configure ~
+	make
+	make install
+
 ## See also
 
 * [QuickJS Javascript Engine](https://bellard.org/quickjs) is about 50,000 lines
