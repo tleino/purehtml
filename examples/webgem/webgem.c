@@ -73,6 +73,25 @@ static struct link *link_head;
 static struct str link_text;
 
 /*
+ * Do we have links waiting to be dumped?
+ * Did we already add LF?
+ *
+ * These tricks are required because we want special handling for
+ * <li> and <ul>, <ol> tags for getting links better bundled together
+ * instead of being dumped after each list item.
+ *
+ * We also defer dumping of links of <h1-6> blocks so that when
+ * heading elements are used as a navigation aid (e.g. in Table of
+ * Contents), the links are bundled together just like in the <li>
+ * case.
+ *
+ * We also dump links only after a final flush of a block element,
+ * not in between of nested block elements.
+ */
+static int have_links;
+static int have_lf;
+
+/*
  * We convert to 'text/gemini' as we get it.
  * The magic happens here.
  */
@@ -280,6 +299,8 @@ add_link(struct block *block, const char *url, const char *desc, int is_img)
 		err(1, "calloc link");
 
 	link->block = block;
+	have_links = 1;
+
 	link->is_img = is_img;
 
 	link->url = strdup(url);
@@ -296,6 +317,11 @@ add_link(struct block *block, const char *url, const char *desc, int is_img)
 	link_head = link;
 }
 
+/*
+ * The input is already stripped out of CRs by purehtml, so we can use
+ * CR here to signify the BR element. So, if we get CR, we dump it as LF
+ * immediately.
+ */
 static void
 print_line(const char *s, size_t len, char last)
 {
@@ -308,7 +334,8 @@ print_line(const char *s, size_t len, char last)
 
 	c = '\0';
 	while (len-- && *s != '\0') {
-		if (isspace(c) && isspace(*s)) {
+		if (*s == '\r') {
+		} else if (isspace(c) && isspace(*s)) {
 			c = *s++;
 			continue;
 		}
@@ -424,13 +451,11 @@ flush_links(struct block *block)
 	i = 0;
 	link = link_head;
 	for (link = link_head; link != NULL; link = link->next) {
-		if (link->block != block)
+		if (link->block == NULL)
 			continue;
 
 		link->block = NULL;
 		printf("=> %s", link->url);
-		if (link->is_img)
-			printf(" [IMAGE]");
 		if (link->desc != NULL && *link->desc != '\0') {
 			putchar(' ');
 			print_content(link->desc);
@@ -438,8 +463,25 @@ flush_links(struct block *block)
 		printf("\n");
 		i++;
 	}
+	have_links = 0;
 
 	return i;
+}
+
+static void
+flush_block_links(struct block *block, int final_flush)
+{
+	if (final_flush &&
+	    !(block->tagid == TAG_LI ||
+	    tagmap(block->tagid)->flags & TAG_HEADING)) {
+		if (!block->has_content && have_links && !have_lf) {
+			putchar('\n');
+			have_lf = 1;
+		}
+
+		if (flush_links(block) > 0)
+			putchar('\n');
+	}
 }
 
 static void
@@ -447,9 +489,18 @@ flush_block(struct block *block, int final_flush)
 {
 	if (block->has_content == 0) {
 		str_add(&block->s, '\0');
+
+		if (have_links) {
+			flush_block_links(block, final_flush);
+		} else if (final_flush &&
+		    (block->tagid == TAG_OL || block->tagid == TAG_UL)) {
+			printf("\n");
+		}
+
 		return;
 	}
 
+	have_lf = 0;
 	if (tagmap(block->tagid)->flags & TAG_HEADING)
 		print_heading(block->tagid, block->s.s);
 	else if (block->tagid == TAG_LI)
@@ -459,9 +510,12 @@ flush_block(struct block *block, int final_flush)
 	else
 		print_generic_block(block->s.s);
 
-	putchar('\n');
-	if (flush_links(block) > 0)
+	if (block->tagid != TAG_LI) {
 		putchar('\n');
+		have_lf = 1;
+	}
+
+	flush_block_links(block, final_flush);
 
 	str_add(&block->s, '\0');
 	block->has_content = 0;
@@ -554,10 +608,10 @@ end_br()
 	 * the begin or end. If we're at begin,
 	 * we forcibly add LF here.
 	 */
-	if (!current_block->has_content)
+	if (!current_block->has_content) {
 		putchar('\n');
-	else
-		block_add_text(current_block, "\n");
+	} else
+		block_add_text(current_block, "\r");
 }
 
 static void
