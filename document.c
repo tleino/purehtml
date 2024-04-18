@@ -22,7 +22,7 @@
 #include <err.h>
 
 struct document *
-document_create()
+document_create(void)
 {
 	struct document	*document;
 

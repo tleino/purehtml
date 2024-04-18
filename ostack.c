@@ -62,7 +62,7 @@ ostack_prev(struct elem *elem)
 }
 
 struct elem *
-ostack_pop()
+ostack_pop(void)
 {
 	if (_ostack_depth > 0) {
 		_ostack_depth--;
@@ -87,13 +87,13 @@ ostack_peek_at(size_t depth)
 }
 
 struct elem *
-ostack_peek()
+ostack_peek(void)
 {
 	return ostack_peek_at(_ostack_depth);
 }
 
 size_t
-ostack_depth()
+ostack_depth(void)
 {
 	return _ostack_depth;
 }

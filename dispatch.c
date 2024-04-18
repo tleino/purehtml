@@ -37,7 +37,7 @@ static void insert_char(struct dispatcher *, struct token *);
 static void insert_close_tag(struct dispatcher *, struct token *);
 static void insert_token_set_mode(struct dispatcher *, struct token *, IMODE);
 static int insert_token_with_mode(struct dispatcher *, struct token *, IMODE);
-static struct elem *pop();
+static struct elem *pop(struct dispatcher *);
 static void print_err(struct dispatcher *, struct token *, IMODE, const char *);
 
 /* helper */

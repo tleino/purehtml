@@ -24,10 +24,10 @@
 struct elem;
 
 void		 ostack_push(struct elem *elem);
-struct elem	*ostack_pop();
+struct elem	*ostack_pop(void);
 struct elem	*ostack_prev(struct elem *elem);
-struct elem	*ostack_peek();
+struct elem	*ostack_peek(void);
 struct elem	*ostack_peek_at(size_t);
-size_t		 ostack_depth();
+size_t		 ostack_depth(void);
 
 #endif
